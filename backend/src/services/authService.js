@@ -25,7 +25,7 @@ class AuthService {
 if (role === 'EMPLOYEE') {
   const employeeCount = await prisma.employee.count();
 
-  await prisma.employee.create({
+  const employee = await prisma.employee.create({
     data: {
       employeeId: `EMP${String(employeeCount + 1).padStart(4, '0')}`,
       userId: user.id,
@@ -78,11 +78,13 @@ if (role === 'EMPLOYEE') {
 
   async login({ email, password }) {
     const user = await prisma.user.findUnique({
-      where: { email, isActive: true },
-      include: { employee: { select: { id: true, firstName: true, lastName: true, profileImage: true, departmentId: true } } },
+      where: { email }
     });
 
-    if (!user) throw new Error('Invalid credentials');
+    if (!user || !user.isActive) {
+      throw new Error('Invalid credentials');
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) throw new Error('Invalid credentials');
 
