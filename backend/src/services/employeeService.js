@@ -111,15 +111,41 @@ class EmployeeService {
 
   async updateEmployee(id, data) {
     const { skills, ...employeeData } = data;
-
+  
+    // Convert empty strings to null
+    Object.keys(employeeData).forEach(key => {
+      if (employeeData[key] === '') {
+        employeeData[key] = null;
+      }
+    });
+  
+    // Convert dates
+    if (employeeData.dateOfBirth) {
+      employeeData.dateOfBirth = new Date(employeeData.dateOfBirth);
+    }
+  
+    if (employeeData.joiningDate) {
+      employeeData.joiningDate = new Date(employeeData.joiningDate);
+    }
+  
+    // Convert salary
+    if (employeeData.salary) {
+      employeeData.salary = parseFloat(employeeData.salary);
+    } else {
+      employeeData.salary = null;
+    }
+  
     const employee = await prisma.$transaction(async (tx) => {
-      const updated = await tx.employee.update({
+      await tx.employee.update({
         where: { id },
         data: employeeData,
       });
-
+  
       if (skills) {
-        await tx.employeeSkill.deleteMany({ where: { employeeId: id } });
+        await tx.employeeSkill.deleteMany({
+          where: { employeeId: id }
+        });
+  
         await tx.employeeSkill.createMany({
           data: skills.map(s => ({
             employeeId: id,
@@ -129,10 +155,8 @@ class EmployeeService {
           })),
         });
       }
-
-      return updated;
     });
-
+  
     return this.getEmployeeById(id);
   }
 
